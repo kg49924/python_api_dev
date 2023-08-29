@@ -1,8 +1,40 @@
+#Importing modules
+
 from typing import Optional
 from fastapi import FastAPI, Response, status, HTTPException
 from fastapi.params import Body
 from pydantic import BaseModel
 from random import randrange
+import psycopg
+from psycopg.rows import dict_row
+import time
+
+
+# Connecting DB
+
+"""while True:
+    try:
+        conn = psycopg.connect(host='localhost',
+                                dbname='python_api_dev_prod_db', 
+                                user='postgres', 
+                            password='Kara@123',
+                                port=5432,
+                                row_factory=dict_row)
+        
+        cur = conn.cursor()
+        print("DB connection successfull.")
+        break
+
+    except Exception as error:
+        print("db not working")
+        print("Error:",error)
+        time.sleep(2)
+
+
+
+"""
+# Server APIs
+
 
 app = FastAPI()
 my_posts = [{'title':"title of post 1","content":"simple thing here na","id":1},
