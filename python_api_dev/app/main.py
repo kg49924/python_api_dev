@@ -41,7 +41,8 @@ my_posts = [{'title':"title of post 1","content":"simple thing here na","id":1},
             {'title':"title of post 2","content":"simple thing here too.","id":2}]
 
 def find_post(id):
-    for p in my_posts:
+    my_posts = cur.execute(f"SELECT * FROM posts WHERE id = {id};").fetchall()
+    for i,p in enumerate(my_posts):
         if p['id']==id:
             return p
     
@@ -56,7 +57,7 @@ class Post(BaseModel):
 
 @app.get("/posts")
 async def root():
-    posts = cur.execute("SELECT * FROM posts").fetchall()
+    posts = cur.execute("SELECT * FROM posts;").fetchall()
     return {"posts":posts}
 
 
@@ -64,9 +65,17 @@ async def root():
 @app.post("/posts",status_code = status.HTTP_201_CREATED)
 async def create_posts(post: Post):
     post_dict = post.model_dump()
-    post_dict['id'] = randrange(0,100000)
-    my_posts.append(post_dict)
-    return {"post":post_dict}
+    print(post_dict)
+    cur.execute(f"""
+                INSERT INTO posts (title, content) 
+                VALUES
+                (%s, %s)
+                RETURNING *;
+""", (post_dict['title'],post_dict['content']))
+    new_post = cur.fetchone()
+    return {"post":new_post}
+
+
 
 @app.get("/posts/{id}")
 async def get_posts(id: int, response: Response):
