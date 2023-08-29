@@ -56,7 +56,8 @@ class Post(BaseModel):
 
 @app.get("/posts")
 async def root():
-    return my_posts
+    posts = cur.execute("SELECT * FROM posts").fetchall()
+    return {"posts":posts}
 
 
 #Using pydantic lib for purpose of data validation.
