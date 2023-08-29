@@ -32,8 +32,3 @@ except:
 
 
 
-
-
-vervwrv
-
-

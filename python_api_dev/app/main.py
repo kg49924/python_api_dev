@@ -12,7 +12,7 @@ import time
 
 # Connecting DB
 
-"""while True:
+while True:
     try:
         conn = psycopg.connect(host='localhost',
                                 dbname='python_api_dev_prod_db', 
@@ -32,7 +32,7 @@ import time
 
 
 
-"""
+
 # Server APIs
 
 
