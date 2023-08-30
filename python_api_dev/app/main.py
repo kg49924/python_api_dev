@@ -40,8 +40,9 @@ app = FastAPI()
 my_posts = [{'title':"title of post 1","content":"simple thing here na","id":1},
             {'title':"title of post 2","content":"simple thing here too.","id":2}]
 
-def find_post(id):
-    my_posts = cur.execute(f"SELECT * FROM posts WHERE id = {id};").fetchall()
+def find_post(id: int):
+    cur.execute(f"SELECT * FROM posts WHERE id = {id};")
+    test_post = cur.fetchone()
     for i,p in enumerate(my_posts):
         if p['id']==id:
             return p
@@ -73,6 +74,7 @@ async def create_posts(post: Post):
                 RETURNING *;
 """, (post_dict['title'],post_dict['content']))
     new_post = cur.fetchone()
+    conn.commit()
     return {"post":new_post}
 
 
@@ -90,26 +92,25 @@ async def get_posts(id: int, response: Response):
 @app.delete("/posts/{id}",status_code=status.HTTP_204_NO_CONTENT)
 async def delete_posts(id:int):
     flag=0
-    for p in my_posts:
-        if p['id']==id:
-            my_posts.remove(p)
-            flag = 1
+    post = cur.execute("DELETE FROM posts WHERE id = %s RETURNING *;",(str(id),)).fetchone()
+    conn.commit()
+
+    if not post:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"message":"not found"})
+
+ 
 
 
 @app.put("/posts/{id}")
 async def update_posts(id: int, post: Post):
-    post_dict = post.model_dump()
-    post_dict['id']=id
-    flag =0
+  
+    updated_post = cur.execute(f"UPDATE posts SET title = '{post.title}', content = '{post.content}' WHERE id = {id} RETURNING *;").fetchone()
 
-    for i,p in enumerate(my_posts):
-        if p['id']==id:
-            flag=1 
-            my_posts[i]=post_dict
-    if flag==0:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,detail={"something":"else"})
+    if not updated_post:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,detail={"message":"not updated"})
     else:
-        return {"post":post_dict}
+        conn.commit()
+        return {"post":updated_post}
         
 
 
