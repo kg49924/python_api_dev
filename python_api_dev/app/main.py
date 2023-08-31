@@ -1,35 +1,18 @@
 #Importing modules
 
 from typing import Optional
-from fastapi import FastAPI, Response, status, HTTPException
+from fastapi import FastAPI, Response, status, HTTPException, Depends
 from fastapi.params import Body
 from pydantic import BaseModel
 from random import randrange
 import psycopg
 from psycopg.rows import dict_row
 import time
+from . import models
+from .database import engine, SessionLocal, get_db
+from sqlalchemy.orm import Session
 
-
-# Connecting DB
-
-while True:
-    try:
-        conn = psycopg.connect(host='localhost',
-                                dbname='python_api_dev_prod_db', 
-                                user='postgres', 
-                            password='Kara@123',
-                                port=5432,
-                                row_factory=dict_row)
-        
-        cur = conn.cursor()
-        print("DB connection successfull.")
-        break
-
-    except Exception as error:
-        print("db not working")
-        print("Error:",error)
-        time.sleep(2)
-
+models.Base.metadata.create_all(bind=engine)
 
 
 
@@ -37,8 +20,7 @@ while True:
 
 
 app = FastAPI()
-my_posts = [{'title':"title of post 1","content":"simple thing here na","id":1},
-            {'title':"title of post 2","content":"simple thing here too.","id":2}]
+
 
 def find_post(id: int):
     cur.execute(f"SELECT * FROM posts WHERE id = {id};")
@@ -53,6 +35,18 @@ class Post(BaseModel):
     title: str
     content: str
     published: bool = True
+
+
+
+
+# test function
+@app.get("/sqlalchemy")
+def test_posts(db: Session = Depends(get_db)):
+
+
+    posts = db.query(models.Post).all()
+
+    return {"data":posts}
 
 
 
