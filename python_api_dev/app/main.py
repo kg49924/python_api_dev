@@ -22,15 +22,8 @@ models.Base.metadata.create_all(bind=engine)
 app = FastAPI()
 
 
-def find_post(id: int):
-    cur.execute(f"SELECT * FROM posts WHERE id = {id};")
-    test_post = cur.fetchone()
-    for i,p in enumerate(my_posts):
-        if p['id']==id:
-            return p
-    
 
-
+# Pydantic model.
 class Post(BaseModel):
     title: str
     content: str
@@ -39,72 +32,62 @@ class Post(BaseModel):
 
 
 
-# test function
-@app.get("/sqlalchemy")
-def test_posts(db: Session = Depends(get_db)):
-
-
-    posts = db.query(models.Post).all()
-
-    return {"data":posts}
-
 
 
 @app.get("/posts")
-async def root():
-    posts = cur.execute("SELECT * FROM posts;").fetchall()
+async def root(db: Session = Depends(get_db)):
+    posts = db.query(models.Post).all()
     return {"posts":posts}
 
 
-#Using pydantic lib for purpose of data validation.
 @app.post("/posts",status_code = status.HTTP_201_CREATED)
-async def create_posts(post: Post):
-    post_dict = post.model_dump()
-    print(post_dict)
-    cur.execute(f"""
-                INSERT INTO posts (title, content) 
-                VALUES
-                (%s, %s)
-                RETURNING *;
-""", (post_dict['title'],post_dict['content']))
-    new_post = cur.fetchone()
-    conn.commit()
+async def create_posts(post: Post, db: Session= Depends(get_db)):
+    
+    new_post = models.Post(
+        **post.model_dump()
+    )
+
+    db.add(new_post) 
+    db.commit()
+    db.refresh(new_post) 
+
     return {"post":new_post}
 
 
 
 @app.get("/posts/{id}")
-async def get_posts(id: int, response: Response):
-    post = find_post(id)
-    if not post:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail = {"message":"not found"})
-        # response.status_code=status.HTTP_404_NOT_FOUND
-        # return {"message":"not found"}
+async def get_posts(id: int, response: Response, db: Session= Depends(get_db)):
 
+    post = db.query(models.Post).filter(models.Post.id == id).first()
+    if not post:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
+                            detail = {"message":"not found"})    
     return ({"post":post})
 
-@app.delete("/posts/{id}",status_code=status.HTTP_204_NO_CONTENT)
-async def delete_posts(id:int):
-    flag=0
-    post = cur.execute("DELETE FROM posts WHERE id = %s RETURNING *;",(str(id),)).fetchone()
-    conn.commit()
 
-    if not post:
+@app.delete("/posts/{id}",status_code=status.HTTP_204_NO_CONTENT)
+async def delete_posts(id:int, db: Session = Depends(get_db)):
+    
+    post = db.query(models.Post).filter(models.Post.id == id)
+    if not post.first():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"message":"not found"})
 
+    post.delete(synchronize_session = False)
+    db.commit()
  
 
-
 @app.put("/posts/{id}")
-async def update_posts(id: int, post: Post):
+async def update_posts(id: int, post: Post, db: Session = Depends(get_db)):
   
-    updated_post = cur.execute(f"UPDATE posts SET title = '{post.title}', content = '{post.content}' WHERE id = {id} RETURNING *;").fetchone()
+    post_query = db.query(models.Post).filter(models.Post.id == id)
 
-    if not updated_post:
+    if not post_query.first():
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,detail={"message":"not updated"})
-    else:
-        conn.commit()
-        return {"post":updated_post}
+
+    post_query.update(post.model_dump(), synchronize_session = False)
+    db.commit()
+    return {"data":post_query.first()}
+
         
 
 
