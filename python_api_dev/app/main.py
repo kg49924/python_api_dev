@@ -10,7 +10,7 @@ import time
 from . import models, schemas
 from .database import engine, SessionLocal, get_db
 from sqlalchemy.orm import Session
-
+from typing import List
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -23,18 +23,14 @@ app = FastAPI()
 
 
 
-
-
-
-
 @app.get("/posts")
 async def root(db: Session = Depends(get_db)):
     posts = db.query(models.Post).all()
-    return {"posts":posts}
+    return posts
 
 
-@app.post("/posts",status_code = status.HTTP_201_CREATED)
-async def create_posts(post: schemas.Post, db: Session= Depends(get_db)):
+@app.post("/posts",status_code = status.HTTP_201_CREATED, response_model = schemas.Post)
+async def create_posts(post: schemas.PostCreate, db: Session= Depends(get_db)) -> schemas.Post:
     
     new_post = models.Post(
         **post.model_dump()
@@ -43,8 +39,8 @@ async def create_posts(post: schemas.Post, db: Session= Depends(get_db)):
     db.add(new_post) 
     db.commit()
     db.refresh(new_post) 
+    return new_post
 
-    return {"post":new_post}
 
 
 
@@ -55,7 +51,7 @@ async def get_posts(id: int, response: Response, db: Session= Depends(get_db)):
     if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
                             detail = {"message":"not found"})    
-    return ({"post":post})
+    return post
 
 
 @app.delete("/posts/{id}",status_code=status.HTTP_204_NO_CONTENT)
@@ -70,7 +66,7 @@ async def delete_posts(id:int, db: Session = Depends(get_db)):
  
 
 @app.put("/posts/{id}")
-async def update_posts(id: int, post: schemas.Post, db: Session = Depends(get_db)):
+async def update_posts(id: int, post: schemas.PostUpdate, db: Session = Depends(get_db)):
   
     post_query = db.query(models.Post).filter(models.Post.id == id)
 
@@ -79,7 +75,9 @@ async def update_posts(id: int, post: schemas.Post, db: Session = Depends(get_db
 
     post_query.update(post.model_dump(), synchronize_session = False)
     db.commit()
-    return {"data":post_query.first()}
+    return post_query.first()
+
+
 
         
 
