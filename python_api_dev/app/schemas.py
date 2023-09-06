@@ -1,19 +1,18 @@
-from pydantic import BaseModel
+from datetime import datetime 
+from pydantic import BaseModel, EmailStr
+from pydantic.utils import GetterDict
 
 
-
-class Post(BaseModel):
-    title: str
-    content: str 
-    published: bool = True
 
 
 class PostBase(BaseModel):
     title: str
     content: str 
     published: bool = True
+    
 
-
+    class Config:
+        from_attributes = True
 
 class PostCreate(PostBase):
     pass
@@ -22,16 +21,28 @@ class PostUpdate(PostBase):
     published: bool 
 
 
-
-
 class Post(PostBase):
     title: str
     content: str
     publshed: bool
 
-    class Config:
-        orm_mode = True
 
+class UserCreate(BaseModel):
+    email: EmailStr
+    password: str
+
+    class Config:
+        from_attributes = True
+
+
+class UserOut(BaseModel):
+    id: int
+    email: EmailStr
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+    
 
 
 if __name__ == "__main__":
