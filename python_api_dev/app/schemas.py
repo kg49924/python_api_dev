@@ -44,6 +44,10 @@ class UserOut(BaseModel):
         from_attributes = True
     
 
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
 
 if __name__ == "__main__":
     t = PostUpdate(title="nejrgnr",
